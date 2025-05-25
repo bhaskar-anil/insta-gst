@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type InvoiceData = {
@@ -17,6 +17,8 @@ export default function InvoiceForm() {
   const { register, handleSubmit } = useForm<InvoiceData>()
   const { user, loading } = useAuth()
   const router = useRouter()
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -40,7 +42,27 @@ export default function InvoiceForm() {
         <input {...register('gstNumber')} placeholder="GST Number" className="w-full p-2 border rounded" required />
         <input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded" required />
         <input type="number" {...register('amount')} placeholder="Amount" className="w-full p-2 border rounded" required />
-        <input type="file" {...register('logo')} accept="image/*" className="w-full" />
+        <input
+          type="file"
+          accept="image/*"
+          className="w-full"
+          {...register('logo')}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              const reader = new FileReader()
+              reader.onloadend = () => {
+                setLogoPreview(reader.result as string)
+              }
+              reader.readAsDataURL(file)
+            }
+          }}
+        />
+        {logoPreview && (
+          <img src={logoPreview} alt="Logo Preview" className="w-32 h-32 object-contain border rounded mx-auto" />
+        )}
+
+
         <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">Generate Invoice</button>
       </form>
 
