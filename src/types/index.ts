@@ -3,6 +3,13 @@ export type InvoiceData = {
   clientName: string
   gstNumber: string
   invoiceDate: string
-  amount: number
+  items: InvoiceItem[]
   logo?: FileList
+}
+
+export type InvoiceItem = {
+  description: string
+  quantity: number
+  rate: number
+  gstRate: number // e.g., 18 means 18%
 }

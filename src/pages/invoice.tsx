@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
@@ -32,7 +32,11 @@ async function uploadPDF(blob: Blob, userId: string): Promise<string | null> {
 }
 
 export default function InvoiceForm() {
-  const { register, handleSubmit } = useForm<InvoiceData>()
+  const { control, register, handleSubmit } = useForm<InvoiceData>({
+    defaultValues: {
+      items: [{ description: '', quantity: 1, rate: 0, gstRate: 18 }]
+    }
+  })
   const { user, loading } = useAuth()
   const router = useRouter()
 
@@ -40,6 +44,8 @@ export default function InvoiceForm() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null)
   const [generated, setGenerated] = useState(false)
   const [whatsappLink, setWhatsappLink] = useState<string | null>(null)
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
   useEffect(() => {
     if (!loading && !user) {
@@ -85,7 +91,16 @@ export default function InvoiceForm() {
         <input {...register('clientName')} placeholder="Client Name" className="w-full p-2 border rounded" required />
         <input {...register('gstNumber')} placeholder="GST Number" className="w-full p-2 border rounded" required />
         <input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded" required />
-        <input type="number" {...register('amount')} placeholder="Amount" className="w-full p-2 border rounded" required />
+        {fields.map((item, index) => (
+          <div key={item.id} className="grid grid-cols-4 gap-2">
+            <input {...register(`items.${index}.description`)} placeholder="Item" className="p-2 border rounded" required />
+            <input type="number" {...register(`items.${index}.quantity`)} placeholder="Qty" className="p-2 border rounded" required />
+            <input type="number" {...register(`items.${index}.rate`)} placeholder="Rate" className="p-2 border rounded" required />
+            <input type="number" {...register(`items.${index}.gstRate`)} placeholder="GST%" className="p-2 border rounded" required />
+            <button type="button" onClick={() => remove(index)} className="text-red-500">Remove</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => append({ description: '', quantity: 1, rate: 0, gstRate: 18 })} className="text-blue-500">Add Item</button>
         <input
           type="file"
           accept="image/*"
