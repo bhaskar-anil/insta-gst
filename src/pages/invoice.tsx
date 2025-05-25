@@ -3,6 +3,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import { InvoicePDF } from '@/components/InvoicePDF'
 
 type InvoiceData = {
   businessName: string
@@ -19,6 +21,9 @@ export default function InvoiceForm() {
   const router = useRouter()
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null)
+  const [generated, setGenerated] = useState(false)
+
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,8 +32,10 @@ export default function InvoiceForm() {
   }, [user, loading])
 
   const onSubmit = (data: InvoiceData) => {
+    setInvoiceData(data)
+    setGenerated(true)
     console.log('Invoice Data:', data)
-  }
+  }  
 
   if (loading) return <p className="text-center mt-10">Loading...</p>
   if (!user) return null
@@ -75,6 +82,16 @@ export default function InvoiceForm() {
       >
         Logout
       </button>
+
+      {generated && invoiceData && (
+        <PDFDownloadLink
+          document={<InvoicePDF data={invoiceData} logoPreview={logoPreview} />}
+          fileName="invoice.pdf"
+          className="block text-center bg-green-600 text-white p-2 rounded mt-4"
+        >
+          {({ loading }) => (loading ? 'Preparing PDF...' : 'Download Invoice')}
+        </PDFDownloadLink>
+      )}
 
     </div>
   )
