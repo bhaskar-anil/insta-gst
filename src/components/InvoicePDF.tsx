@@ -1,5 +1,6 @@
 // components/InvoicePDF.tsx
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { InvoiceData } from '@/types/index'
 
 const styles = StyleSheet.create({
   page: { padding: 30 },
@@ -7,7 +8,7 @@ const styles = StyleSheet.create({
   logo: { width: 100, height: 100, marginBottom: 10 },
 })
 
-export function InvoicePDF({ data, logoPreview }: { data: any, logoPreview: string | null }) {
+export function InvoicePDF({ data, logoPreview }: { data: InvoiceData, logoPreview: string | null }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>

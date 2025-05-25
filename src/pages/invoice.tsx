@@ -3,16 +3,29 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { PDFDownloadLink } from '@react-pdf/renderer'
+import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
 import { InvoicePDF } from '@/components/InvoicePDF'
+import { InvoiceData } from '@/types/index'
 
-type InvoiceData = {
-  businessName: string
-  clientName: string
-  gstNumber: string
-  invoiceDate: string
-  amount: number
-  logo?: FileList
+async function uploadPDF(blob: Blob): Promise<string | null> {
+  const fileName = `invoice-${Date.now()}.pdf`
+  const { data, error } = await supabase.storage
+    .from('invoices') // You must create this bucket in Supabase dashboard
+    .upload(fileName, blob, {
+      contentType: 'application/pdf',
+      upsert: true,
+    })
+
+  if (error) {
+    console.error('Upload failed:', error.message)
+    return null
+  }
+
+  const { data: publicUrl } = supabase.storage
+    .from('invoices')
+    .getPublicUrl(fileName)
+
+  return publicUrl?.publicUrl || null
 }
 
 export default function InvoiceForm() {
@@ -23,7 +36,7 @@ export default function InvoiceForm() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null)
   const [generated, setGenerated] = useState(false)
-
+  const [whatsappLink, setWhatsappLink] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -31,14 +44,33 @@ export default function InvoiceForm() {
     }
   }, [user, loading])
 
-  const onSubmit = (data: InvoiceData) => {
+  const onSubmit = async (data: InvoiceData) => {
     setInvoiceData(data)
     setGenerated(true)
     console.log('Invoice Data:', data)
-  }  
+  
+    const blob = await pdf(<InvoicePDF data={data} logoPreview={logoPreview} />).toBlob()
+    console.log('PDF Blob created:', blob)
+  
+    const publicUrl = await uploadPDF(blob)
+    console.log('Public URL:', publicUrl)
+  
+    if (publicUrl) {
+      const link = `https://wa.me/?text=${encodeURIComponent(`Here is your invoice: ${publicUrl}`)}`
+      console.log('WhatsApp Link:', link)
+      setWhatsappLink(link)
+      setGenerated(true)
+    }
+  }
+  
+   
 
   if (loading) return <p className="text-center mt-10">Loading...</p>
   if (!user) return null
+
+  console.log('generated:', generated)
+  console.log('invoiceData:', invoiceData)
+  console.log('whatsappLink:', whatsappLink)
 
   return (
     <div className="max-w-xl mx-auto mt-10 p-4 border rounded shadow space-y-4">
@@ -91,6 +123,17 @@ export default function InvoiceForm() {
         >
           {({ loading }) => (loading ? 'Preparing PDF...' : 'Download Invoice')}
         </PDFDownloadLink>
+      )}
+
+      {whatsappLink && (
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center bg-green-500 text-white p-2 rounded mt-4"
+        >
+          Share via WhatsApp
+        </a>
       )}
 
     </div>
