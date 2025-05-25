@@ -7,13 +7,16 @@ import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
 import { InvoicePDF } from '@/components/InvoicePDF'
 import { InvoiceData } from '@/types/index'
 
-async function uploadPDF(blob: Blob): Promise<string | null> {
+async function uploadPDF(blob: Blob, userId: string): Promise<string | null> {
   const fileName = `invoice-${Date.now()}.pdf`
   const { data, error } = await supabase.storage
-    .from('invoices') // You must create this bucket in Supabase dashboard
+    .from('invoices')
     .upload(fileName, blob, {
       contentType: 'application/pdf',
       upsert: true,
+      metadata: {
+        created_by: userId,
+      },
     })
 
   if (error) {
@@ -45,23 +48,25 @@ export default function InvoiceForm() {
   }, [user, loading])
 
   const onSubmit = async (data: InvoiceData) => {
+    if (!user) {
+      console.error('User not logged in')
+      return
+    }
+  
     setInvoiceData(data)
     setGenerated(true)
     console.log('Invoice Data:', data)
   
     const blob = await pdf(<InvoicePDF data={data} logoPreview={logoPreview} />).toBlob()
-    console.log('PDF Blob created:', blob)
-  
-    const publicUrl = await uploadPDF(blob)
-    console.log('Public URL:', publicUrl)
+    const publicUrl = await uploadPDF(blob, user.id)
   
     if (publicUrl) {
-      const link = `https://wa.me/?text=${encodeURIComponent(`Here is your invoice: ${publicUrl}`)}`
-      console.log('WhatsApp Link:', link)
-      setWhatsappLink(link)
-      setGenerated(true)
+      setWhatsappLink(
+        `https://wa.me/?text=${encodeURIComponent(`Here is your invoice: ${publicUrl}`)}`
+      )
     }
   }
+  
   
    
 
